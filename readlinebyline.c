@@ -1,80 +1,87 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-void getdata (FILE *file, int *dim, double **matrix, double *vector)
+void getdata (FILE *file, int *rows, int *cols, double ***matrix, double **vector)
 {
-	file = fopen ("gauss2.dat", "rw");	
+	file = fopen ("gauss3.dat", "rw");	
 	if (file == NULL)
 	{
 		perror ("fopen");
 		exit (EXIT_FAILURE);
 	}
 
-	fscanf (file, "%d", dim);		
-	printf ("%d\n", *dim);
-	
+	fscanf (file, "%d", rows);
+	fscanf (file, "%d", cols);		
+	printf ("%d\n", *rows);
+	printf ("%d\n", *cols);
+
+	*matrix = (double **)malloc ((*rows)*sizeof(double*));
+	*vector = (double *)malloc ((*rows)*sizeof(double));	
 	int i = 0;
-	for (i = 0; i < *dim; ++i)
+	for (i = 0; i < *rows; ++i)
 	{
-		matrix[i] = (double*) malloc ((*dim) * sizeof (double));
+		(*matrix)[i] = (double*) malloc ((*cols) * sizeof (double));
 	}
 
 	int j = 0;
-	for (i = 0; i < *dim; ++i)
+	for (i = 0; i < *rows; ++i)
 	{
-		for (j = 0; j < *dim; ++j)
+		for (j = 0; j < *cols; ++j)
 		{
-			fscanf (file, "%lf", &matrix[i][j]);
-			printf ("%lf  ", matrix[i][j]);
+			fscanf (file, "%lf", &(*matrix)[i][j]);
+			//printf ("%lf  ", matrix[i][j]);
 		}
-		printf ("\n");
+		//printf ("\n");
 	}
 
-	for (i = 0; i < *dim; ++i)
+	for (i = 0; i < *rows; ++i)
 	{
-		fscanf (file, "%lf", &vector[i]);
-		printf ("%lf\n", vector[i]);
+		fscanf (file, "%lf", &(*vector)[i]);
+		//printf ("%lf\n", vector[i]);
 	}
 	
 }
 
-int max_row (double **matrix, int diag, int dim)
+int max_row (double **matrix, int diag, int rows)
 {
-	int maxrow = diag;
-	double max = matrix[maxrow][maxrow];
+	int tmp;
+	tmp = diag;
+	double max, abs_val;
+	max = matrix[tmp][tmp] > 0 ? matrix[tmp][tmp] : -matrix[tmp][tmp];
 	int i;
-	for (i = 1; i < dim - diag; ++i)
+	for (i = 1; i < rows - diag; ++i)
 	{
-		if (matrix[diag+i][diag] > max)
+		abs_val = matrix[diag+i][diag] > 0 ? matrix[diag+i][diag] : -matrix[diag+i][diag];
+		if (abs_val > max)
 		{
-			maxrow = diag + i;
-			max = matrix[maxrow][diag];
+			tmp = diag + i;
+			max = abs_val;
 			
 		}
 	}
-	printf ("maxrow %d : %lf\n", maxrow, max);
-	return maxrow;
+	printf ("max_row %d : %f\n", tmp, max);
+	return tmp;
 }
-void interchange_row (double **matrix, int diag, int maxrow, int dim)
+void interchange_row (double ***matrix, int diag, int maxrow, int rows)
 {
 	int j;
 	double tmp;
-	for (j = 0; j < dim; ++j)
+	for (j = 0; j < rows; ++j)
 	{
-		tmp = matrix[diag][j];
-		matrix[diag][j] = matrix[maxrow][j];
-		matrix[maxrow][j] = tmp;
+		tmp = (*matrix)[diag][j];
+		(*matrix)[diag][j] = (*matrix)[maxrow][j];
+		(*matrix)[maxrow][j] = tmp;
 	}
 }
 
-void print_matrix (double **matrix, int dim)
+void print_matrix (double ***matrix, int rows, int cols)
 {
 	int i,j;
-	for (i = 0; i < dim; ++i)
+	for (i = 0; i < rows; ++i)
 	{
-		for (j = 0; j < dim; j++)
+		for (j = 0; j < cols; j++)
 		{
-			printf ("%lf ", matrix[i][j]);
+			printf ("%f ", (*matrix)[i][j]);
 		}
 		printf ("\n");
 	}
@@ -91,26 +98,27 @@ void zerooperate_row (double **matrix, int diag, int row, int dim)
 	}
 }
 
-void privateprivot_gauss (double **matrix, double *vector, double *solution, int dim)
+void privateprivot_gauss (double ***matrix, double **vector, double **solution, int rows, int cols)
 {
 	//find max row 
 	//row interchange
 	//make 0 for all row behin diagonal
 	int maxrow;
-	for (int i = 0; i < dim; ++i)
+	int num_iter = rows < cols ? rows : cols;
+	for (int i = 0; i < num_iter; ++i)
 	{
 		//find max row
-		maxrow = max_row (matrix, i, dim);
+		maxrow = max_row (*matrix, i, rows);
 
 		// row interchange
 		if (maxrow != i)
 		{
-			interchange_row (matrix, i, maxrow, dim);
+			interchange_row (matrix, i, maxrow, rows);
+			print_matrix (matrix, rows, cols);
+			printf ("\n");
 		}
 
-		print_matrix (matrix, dim);
-		printf ("\n");
-
+		/*
 		// operate rows below diagonal
 		for (int j = i + 1; j < dim; ++j)
 		{
@@ -119,6 +127,7 @@ void privateprivot_gauss (double **matrix, double *vector, double *solution, int
 
 		print_matrix (matrix, dim);
 		printf ("\n");
+		*/
 
 	}
 	
@@ -127,14 +136,14 @@ void privateprivot_gauss (double **matrix, double *vector, double *solution, int
 int main (void)
 {
 	FILE *stream;
-	int dim;
-	// allocate matrix A
-	double **A = (double **) malloc (dim * sizeof (double*));
-	//allocate vector b
-	double *b = (double *) malloc (dim * sizeof (double));
-	//allocate vector x
-	double *x = (double *) malloc (dim * sizeof (double));
-	getdata (stream, &dim, A, b);
-	privateprivot_gauss (A, b, x, dim);
+	int rows, cols;
+	double **A;
+	double *b;
+	//double *x = (double *) malloc (dim * sizeof (double));
+	double *x;
+	getdata (stream, &rows, &cols, &A, &b);
+	print_matrix (&A, rows, cols);
+	printf ("rows = %d, colum = %d \n", rows, cols);
+	privateprivot_gauss (&A, &b, &x, rows, cols);
 	return 0;
 }
