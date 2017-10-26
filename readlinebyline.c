@@ -1,9 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#define ABS(number) (number > 0 ? number : -number)
+
 void getdata (FILE *file, int *rows, int *cols, double ***matrix, double **vector)
 {
-	file = fopen ("gauss3.dat", "rw");	
+	file = fopen ("gauss4.dat", "rw");	
 	if (file == NULL)
 	{
 		perror ("fopen");
@@ -42,36 +44,23 @@ void getdata (FILE *file, int *rows, int *cols, double ***matrix, double **vecto
 	
 }
 
-int max_row (double **matrix, int diag, int rows)
+int max_row (double ***matrix, int diag, int rows)
 {
 	int tmp;
 	tmp = diag;
 	double max, abs_val;
-	max = matrix[tmp][tmp] > 0 ? matrix[tmp][tmp] : -matrix[tmp][tmp];
+	max = ABS((*matrix)[tmp][tmp]);
 	int i;
-	for (i = 1; i < rows - diag; ++i)
+	for (i = 0; i < rows - diag; ++i)
 	{
-		abs_val = matrix[diag+i][diag] > 0 ? matrix[diag+i][diag] : -matrix[diag+i][diag];
-		if (abs_val > max)
+		if (ABS ((*matrix)[diag+i][diag]) > max)
 		{
 			tmp = diag + i;
-			max = abs_val;
-			
+			max = ABS ((*matrix)[diag+i][diag]);
 		}
 	}
 	printf ("max_row %d : %f\n", tmp, max);
 	return tmp;
-}
-void interchange_row (double ***matrix, int diag, int maxrow, int rows)
-{
-	int j;
-	double tmp;
-	for (j = 0; j < rows; ++j)
-	{
-		tmp = (*matrix)[diag][j];
-		(*matrix)[diag][j] = (*matrix)[maxrow][j];
-		(*matrix)[maxrow][j] = tmp;
-	}
 }
 
 void print_matrix (double ***matrix, int rows, int cols)
@@ -81,20 +70,32 @@ void print_matrix (double ***matrix, int rows, int cols)
 	{
 		for (j = 0; j < cols; j++)
 		{
-			printf ("%f ", (*matrix)[i][j]);
+			printf ("%lf ", (*matrix)[i][j]);
 		}
 		printf ("\n");
 	}
 }
 
-void zerooperate_row (double **matrix, int diag, int row, int dim)
+void interchange_row (double ***matrix, int diag, int maxrow, int cols)
+{
+	int j;
+	double tmp;
+	for (j = 0; j < cols; ++j)
+	{
+		tmp = (*matrix)[diag][j];
+		(*matrix)[diag][j] = (*matrix)[maxrow][j];
+		(*matrix)[maxrow][j] = tmp;
+	}
+}
+void zerooperate_row (double ***matrix, int diag, int row, int cols)
 {
 	int i;
 	double tmp;
-	tmp = matrix[row][0]/matrix[diag][diag];
-	for (i = 0; i < dim; ++i)
+	tmp = (*matrix)[row][diag]/(*matrix)[diag][diag];
+	printf ("factor : %lf/%lf\n", (*matrix)[row][0], (*matrix)[diag][diag]);
+	for (i = 0; i < cols; ++i)
 	{
-		matrix[row][i] -= tmp*matrix[row][i];
+		(*matrix)[row][i] -= tmp*(*matrix)[diag][i];
 	}
 }
 
@@ -108,26 +109,23 @@ void privateprivot_gauss (double ***matrix, double **vector, double **solution, 
 	for (int i = 0; i < num_iter; ++i)
 	{
 		//find max row
-		maxrow = max_row (*matrix, i, rows);
+		maxrow = max_row (matrix, i, rows);
 
 		// row interchange
 		if (maxrow != i)
 		{
-			interchange_row (matrix, i, maxrow, rows);
+			interchange_row (matrix, i, maxrow, cols);
 			print_matrix (matrix, rows, cols);
 			printf ("\n");
 		}
 
-		/*
 		// operate rows below diagonal
-		for (int j = i + 1; j < dim; ++j)
+		for (int j = i + 1; j < rows; ++j)
 		{
-			zerooperate_row (matrix, i, j, dim);
+			zerooperate_row (matrix, i, j, cols);
 		}
 
-		print_matrix (matrix, dim);
-		printf ("\n");
-		*/
+		print_matrix (matrix, rows, cols);
 
 	}
 	
