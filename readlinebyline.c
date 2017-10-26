@@ -14,8 +14,6 @@ void getdata (FILE *file, int *rows, int *cols, double ***matrix, double **vecto
 
 	fscanf (file, "%d", rows);
 	fscanf (file, "%d", cols);		
-	printf ("%d\n", *rows);
-	printf ("%d\n", *cols);
 
 	*matrix = (double **)malloc ((*rows)*sizeof(double*));
 	*vector = (double *)malloc ((*rows)*sizeof(double));	
@@ -59,7 +57,6 @@ int max_row (double ***matrix, int diag, int rows)
 			max = ABS ((*matrix)[diag+i][diag]);
 		}
 	}
-	printf ("max_row %d : %f\n", tmp, max);
 	return tmp;
 }
 
@@ -74,6 +71,15 @@ void print_matrix (double ***matrix, int rows, int cols)
 		}
 		printf ("\n");
 	}
+}
+
+void print_vector (double **vec, int dim)
+{
+	for (int i = 0; i < dim; ++i)
+	{
+		printf ("%lf ", (*vec)[i]);
+	}
+	printf ("\n");
 }
 
 void interchange_row (double ***matrix, int diag, int maxrow, int cols)
@@ -99,6 +105,23 @@ void zerooperate_row (double ***matrix, int diag, int row, int cols)
 	}
 }
 
+void solve (double ***matrix, int rows, int cols, double **solution)
+{
+	*solution = (double *) malloc ((cols-1) * sizeof(double));
+	(*solution)[cols - 2] = 0;
+	double tmp;
+	for (int i = rows - 1; i > -1; --i)
+	{
+		tmp = (*matrix)[i][cols - 1];
+		for (int j = cols - 2; j > i; --j)
+		{
+			 tmp -= (*matrix)[i][j]*(*solution)[j];
+		}
+		(*solution)[i] = tmp / (*matrix)[i][i];
+	}
+	printf ("\n");
+}
+
 void privateprivot_gauss (double ***matrix, double **vector, double **solution, int rows, int cols)
 {
 	//find max row 
@@ -110,10 +133,12 @@ void privateprivot_gauss (double ***matrix, double **vector, double **solution, 
 	{
 		//find max row
 		maxrow = max_row (matrix, i, rows);
+		printf ("\nmax_row : #%d\n", maxrow + 1);
 
 		// row interchange
 		if (maxrow != i)
 		{
+			printf ("interchange line #%d and #%d\n", maxrow + 1, i+ 1);
 			interchange_row (matrix, i, maxrow, cols);
 			print_matrix (matrix, rows, cols);
 			printf ("\n");
@@ -123,9 +148,11 @@ void privateprivot_gauss (double ***matrix, double **vector, double **solution, 
 		for (int j = i + 1; j < rows; ++j)
 		{
 			zerooperate_row (matrix, i, j, cols);
+			print_matrix (matrix, rows, cols);
 		}
 
-		print_matrix (matrix, rows, cols);
+		// backward substitution
+		solve (matrix, rows, cols, solution);
 
 	}
 	
@@ -141,7 +168,11 @@ int main (void)
 	double *x;
 	getdata (stream, &rows, &cols, &A, &b);
 	print_matrix (&A, rows, cols);
-	printf ("rows = %d, colum = %d \n", rows, cols);
 	privateprivot_gauss (&A, &b, &x, rows, cols);
+	printf ("\nsolution :\n");
+	print_vector (&x, cols-1);
+	free (A);
+	free (b);
+	free (x);
 	return 0;
 }
